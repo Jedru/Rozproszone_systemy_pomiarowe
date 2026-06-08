@@ -1,1 +1,3 @@
 # TODO
+
+#trzymasz funkcje tu

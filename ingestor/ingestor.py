@@ -5,7 +5,7 @@ import paho.mqtt.client as mqtt
 import psycopg2
 MQTT_HOST = "broker"
 MQTT_PORT = 1883
-MQTT_TOPIC = "lab/+/+/+"
+MQTT_TOPIC = "#"
 
 """
 UWAGA!

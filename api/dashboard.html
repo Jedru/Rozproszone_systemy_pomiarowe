@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel czujników BME280</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111a2e;
+      --panel-2: #18233b;
+      --line: #2a3a5f;
+      --text: #e8eefb;
+      --muted: #9fb0d1;
+      --ok: #36c98c;
+      --warn: #ffb547;
+      --bad: #ff6b81;
+      --temp: #ff7a59;
+      --hum: #53b7ff;
+      --pres: #b98cff;
+      --accent: #67e8f9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at top, #152240 0%, var(--bg) 55%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .title h1 { margin: 0; font-size: 2rem; }
+    .title p { margin: 6px 0 0; color: var(--muted); }
+    .badge-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1.8fr;
+      gap: 18px;
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.22);
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.1rem;
+    }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .metric {
+      background: var(--panel-2);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid var(--line);
+    }
+    .metric .label { color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
+    .metric .value { font-size: 1.7rem; font-weight: 800; }
+    .metric.temp .value { color: var(--temp); }
+    .metric.hum .value { color: var(--hum); }
+    .metric.pres .value { color: var(--pres); }
+    .state-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .state {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      border-radius: 50%;
+      margin-right: 8px;
+      background: var(--bad);
+      box-shadow: 0 0 12px rgba(255,107,129,0.45);
+    }
+    .status-dot.on { background: var(--ok); box-shadow: 0 0 12px rgba(54,201,140,0.45); }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: #13203a;
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.primary { background: linear-gradient(135deg, #0f8b8d, #125d98); }
+    #scope {
+      min-height: 430px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .foot { margin-top: 14px; color: var(--muted); font-size: 0.9rem; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .mini-grid { grid-template-columns: 1fr; }
+      .state-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
+        <h1>Panel czujników BME280</h1>
+        <p>Podgląd temperatury, wilgotności i ciśnienia z endpointu <span class="mono">http://localhost:5001/measurements</span>.</p>
+      </div>
+      <div class="badge-row">
+        <div class="badge">Tryb: monitor online</div>
+        <div class="badge">Źródło: REST API</div>
+        <div class="badge" id="refreshInfo">Odświeżanie co 3 s</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Stan systemu</h2>
+        <div class="mini-grid">
+          <div class="metric temp">
+            <div class="label">Temperatura</div>
+            <div class="value" id="tempValue">--</div>
+          </div>
+          <div class="metric hum">
+            <div class="label">Wilgotność</div>
+            <div class="value" id="humValue">--</div>
+          </div>
+          <div class="metric pres">
+            <div class="label">Ciśnienie</div>
+            <div class="value" id="presValue">--</div>
+          </div>
+        </div>
+
+        <div class="state-list">
+          <div class="state"><span class="status-dot" id="apiDot"></span>API: <span id="apiState">sprawdzanie...</span></div>
+          <div class="state"><span class="status-dot" id="mqttDot"></span>MQTT / ingestor: <span id="mqttState">sprawdzanie...</span></div>
+          <div class="state">Urządzenie: <strong id="deviceId">—</strong></div>
+          <div class="state">Grupa: <strong id="groupId">—</strong></div>
+          <div class="state">Temat MQTT: <strong id="topicId">—</strong></div>
+          <div class="state">Ostatnia aktualizacja: <strong id="lastUpdate">—</strong></div>
+        </div>
+
+        <div class="controls">
+          <button class="primary">Obserwuj czujnik</button>
+          <button>Zatrzymaj czujnik</button>
+          <button>Wznów czujnik</button>
+          <button>Reset alarmów</button>
+        </div>
+
+        <p class="foot" id="connMessage">Łączenie z API...</p>
+      </section>
+
+      <section class="panel">
+        <h2>Oscyloskop danych</h2>
+        <div id="scope"></div>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top: 18px;">
+      <h2>Najnowsze rekordy /latest</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>group_id</th>
+            <th>device_id</th>
+            <th>sensor</th>
+            <th>value</th>
+            <th>unit</th>
+            <th>ts_ms</th>
+            <th>seq</th>
+            <th>topic</th>
+          </tr>
+        </thead>
+        <tbody id="latestBody">
+          <tr><td colspan="9">Ładowanie danych...</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    const scopeEl = document.getElementById('scope');
+
+    function setStatus(dotId, textId, active, onText, offText) {
+      const dot = document.getElementById(dotId);
+      const text = document.getElementById(textId);
+      dot.classList.toggle('on', !!active);
+      text.textContent = active ? onText : offText;
+    }
+
+    function formatMetric(data, digits = 2) {
+      if (!data || data.value === null || data.value === undefined) return '--';
+      return `${Number(data.value).toFixed(digits)} ${data.unit || ''}`.trim();
+    }
+
+    function renderTable(rows) {
+      const body = document.getElementById('latestBody');
+      if (!rows || !rows.length) {
+        body.innerHTML = '<tr><td colspan="9">Brak rekordów w /latest.</td></tr>';
+        return;
+      }
+      body.innerHTML = rows.map(row => `
+        <tr>
+          <td>${row.id ?? ''}</td>
+          <td>${row.group_id ?? ''}</td>
+          <td>${row.device_id ?? ''}</td>
+          <td>${row.sensor ?? ''}</td>
+          <td>${row.value ?? ''}</td>
+          <td>${row.unit ?? ''}</td>
+          <td class="mono">${row.ts_ms ?? ''}</td>
+          <td>${row.seq ?? ''}</td>
+          <td class="mono">${row.topic ?? ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderScope(series) {
+      const traces = [
+        {
+          x: (series.temperature || []).map(p => p.x),
+          y: (series.temperature || []).map(p => p.y),
+          type: 'scatter', mode: 'lines', name: 'Temperatura',
+          line: { color: '#ff7a59', width: 3 }
+        },
+        {
+          x: (series.humidity || []).map(p => p.x),
+          y: (series.humidity || []).map(p => p.y),
+          type: 'scatter', mode: 'lines', name: 'Wilgotność',
+          line: { color: '#53b7ff', width: 3 }
+        },
+        {
+          x: (series.pressure || []).map(p => p.x),
+          y: (series.pressure || []).map(p => p.y),
+          type: 'scatter', mode: 'lines', name: 'Ciśnienie',
+          line: { color: '#b98cff', width: 3 }
+        }
+      ];
+      const layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#e8eefb', family: 'Inter, sans-serif' },
+        margin: { l: 50, r: 20, t: 20, b: 45 },
+        legend: { orientation: 'h', x: 0, y: 1.15 },
+        xaxis: { title: 'Czas', gridcolor: '#2a3a5f' },
+        yaxis: { title: 'Wartość', gridcolor: '#2a3a5f' }
+      };
+      Plotly.react(scopeEl, traces, layout, {responsive: true, displayModeBar: true});
+    }
+
+    async function refreshDashboard() {
+      try {
+        const res = await fetch('/api/dashboard');
+        const data = await res.json();
+
+        document.getElementById('tempValue').textContent = formatMetric(data.summary.temperature, 2);
+        document.getElementById('humValue').textContent = formatMetric(data.summary.humidity, 2);
+        document.getElementById('presValue').textContent = formatMetric(data.summary.pressure, 2);
+        document.getElementById('deviceId').textContent = data.summary.device_id || '—';
+        document.getElementById('groupId').textContent = data.summary.group_id || '—';
+        document.getElementById('topicId').textContent = data.summary.topic || '—';
+        document.getElementById('lastUpdate').textContent = data.summary.last_update || '—';
+        document.getElementById('connMessage').textContent = data.connection.message || '';
+
+        setStatus('apiDot', 'apiState', data.connection.api_active, 'aktywne', 'nieaktywne');
+        setStatus('mqttDot', 'mqttState', data.connection.mqtt_active, 'wygląda na aktywne', 'brak świeżych danych');
+
+        renderTable(data.latest_rows || []);
+        renderScope(data.series || {});
+      } catch (err) {
+        document.getElementById('connMessage').textContent = `Błąd połączenia: ${err}`;
+        setStatus('apiDot', 'apiState', false, 'aktywne', 'nieaktywne');
+        setStatus('mqttDot', 'mqttState', false, 'aktywne', 'nieaktywne');
+      }
+    }
+
+    refreshDashboard();
+    setInterval(refreshDashboard, 3000);
+  </script>
+</body>
+</html>

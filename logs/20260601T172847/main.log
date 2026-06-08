@@ -1,0 +1,5 @@
+2026-06-01 17:28:47.443 [info] StorageMainService: creating application shared storage
+2026-06-01 17:28:47.453 [info] update#setState idle
+2026-06-01 17:28:47.824 [info] [shared storage] Creating shared storage database at '/root/.vscode-shared/sharedStorage/state.vscdb' (wasCreated: true)
+2026-06-01 17:28:47.825 [info] [shared storage] Initializing fallback application storage (path: /home/jedrula/Projects/python/rozpr_sys_pomiar/Rozproszone-systemy-pomiarowe/User/globalStorage/state.vscdb)
+2026-06-01 17:28:47.876 [info] [shared storage] Fallback application storage initialized with 3 items
