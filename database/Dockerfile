@@ -2,7 +2,7 @@ FROM postgres:18-alpine
 
 ENV POSTGRES_USER=admin
 ENV POSTGRES_PASSWORD=admin_pass1234
-ENV POSTGRES_DB=abcd_db
+ENV POSTGRES_DB=sensor_db
 
 WORKDIR /docker-entrypoint-initdb.d
 
