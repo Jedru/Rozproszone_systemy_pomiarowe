@@ -11,7 +11,7 @@ class Measurement:
     received_at: datetime
 
     def to_obj(self):
-        return { 'id': self.id, 'device_id': self.device_id, 'value': self.value, 'unit': self.unit, 'timestamp': self.timestamp() }
+        return { 'id': self.id, 'device_id': self.device_id, 'value': self.value, 'unit': self.unit, 'timestamp': self.timestamp().isoformat() }
 
     def timestamp(self):
         return datetime.fromtimestamp(self.measured_at, timezone.utc)
