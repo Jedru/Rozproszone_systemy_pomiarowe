@@ -14,10 +14,6 @@ from PySide6.QtCore import Slot, QTimer, QModelIndex
 API_URL = 'http://localhost:5001/'
 
 class DataContainer:
-    # TODO: add data store
-    # TODO: oneshot
-    # TODO: update plot
-    # TODO: take in device (allow device changes on the fly)
     def __init__(self, title, method, plot):
         self._title = title
         self._method = method
@@ -96,6 +92,10 @@ class DataContainer:
         self._latest_ts = None
         if dev_id is not None:
             self._fetch_data(10)
+
+    def update(self):
+        if dev_it is not None:
+            self._fetch_data(1)
     
     @Slot()
     def on_timeout(self):
